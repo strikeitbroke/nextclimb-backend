@@ -1,0 +1,50 @@
+import math
+
+from geopy.distance import geodesic
+from geopy.exc import GeocoderServiceError, GeocoderTimedOut
+from geopy.geocoders import Nominatim
+
+from activity.schemas import CoorsSchema, SegmentBoundsSchema
+
+
+def get_coors(city_name: str) -> CoorsSchema | None:
+    # 1. Initialize the geocoding service
+    # 'user_agent' is required; use your app's name
+    geolocator = Nominatim(user_agent="strava_segment_explorer")
+
+    try:
+        # 2. Perform the lookup
+        location = geolocator.geocode(city_name)
+
+        if location:
+            # Returns a tuple: (latitude, longitude)
+            return CoorsSchema(latitude=location.latitude, longitude=location.longitude)
+
+        return None  # Return None if city not found
+
+    except (GeocoderTimedOut, GeocoderServiceError) as e:
+        print(f"Error: {e}")
+        return None
+
+
+def get_bounds(coors: CoorsSchema, radius: float) -> SegmentBoundsSchema:
+    center = (coors.latitude, coors.longitude)
+
+    # Note: For a "square" box with a 'radius', you actually go further
+    # out to the corner than just the radius. We use radius * sqrt(2)
+    # if you want the circle to be inside the box.
+    corner_dist = geodesic(miles=radius * math.sqrt(2))
+
+    # 1. Calculate Northeast corner (45 degrees)
+    ne_point = corner_dist.destination(center, bearing=45)
+
+    # 2. Calculate Southwest corner (225 degrees)
+    sw_point = corner_dist.destination(center, bearing=225)
+
+    # 3. Format exactly as Strava wants: "sw_lat,sw_lng,ne_lat,ne_lng"
+    return SegmentBoundsSchema(
+        sw_lat=sw_point.latitude,
+        sw_lng=sw_point.longitude,
+        ne_lat=ne_point.latitude,
+        ne_lng=ne_point.longitude,
+    )
