@@ -17,6 +17,7 @@ def get_coors(city_name: str) -> CoorsSchema | None:
         location = geolocator.geocode(city_name)
 
         if location:
+            print(f"get_coors: {location.latitude}, {location.longitude}")
             # Returns a tuple: (latitude, longitude)
             return CoorsSchema(latitude=location.latitude, longitude=location.longitude)
 
@@ -40,7 +41,9 @@ def get_bounds(coors: CoorsSchema, radius: float) -> SegmentBoundsSchema:
 
     # 2. Calculate Southwest corner (225 degrees)
     sw_point = corner_dist.destination(center, bearing=225)
-
+    print(
+        f"bounds--> {sw_point.latitude}, {sw_point.longitude}, {ne_point.latitude}, {ne_point.longitude}"
+    )
     # 3. Format exactly as Strava wants: "sw_lat,sw_lng,ne_lat,ne_lng"
     return SegmentBoundsSchema(
         sw_lat=sw_point.latitude,

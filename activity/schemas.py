@@ -29,3 +29,26 @@ class ExplorerSegment(Schema):
     climb_category_desc: str
     avg_grade: float
     distance: float
+
+    def to_miles(self) -> float:
+        meters_in_mile = 1609.344
+        return round(self.distance / meters_in_mile, 1)
+
+    def to_km(self) -> float:
+        return round(self.disance / 1000, 1)
+
+    def get_difficulty(self) -> str:
+        if self.climb_category <= 2:
+            return "Easy"
+        elif self.climb_category == 3:
+            return "Intermediate"
+        else:
+            return "Hard"
+
+
+class SearchResponseSchema(Schema):
+    id: int
+    name: str
+    difficulty: str
+    distance: float
+    avg_grade: float
