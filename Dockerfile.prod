@@ -1,0 +1,40 @@
+# --- Stage 1: Build ---
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+
+# Enable bytecode compilation for faster startup
+ENV UV_COMPILE_BYTECODE=1
+# Copy from cache instead of linking (critical for Docker)
+ENV UV_LINK_MODE=copy
+
+WORKDIR /app
+
+# Install dependencies first (for better layer caching)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
+
+# Copy the rest of the code and install the project
+COPY . /app
+RUN chmod +x /app/entrypoint.sh
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
+
+
+# --- Stage 2: Runtime ---
+FROM python:3.12-slim-bookworm
+
+WORKDIR /app
+
+# Copy the virtual environment from the builder
+COPY --from=builder /app /app
+
+# Place the venv at the front of the PATH
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+
+# Expose Django port
+EXPOSE 8000
+
+CMD ["uvicorn", "core.asgi:application", "--host", "0.0.0.0", "--port", "8000"]

@@ -11,4 +11,5 @@ dependencies = [
     "geopy>=2.4.1",
     "python-dotenv>=1.2.1",
     "stravalib>=2.4",
+    "uvicorn>=0.40.0",
 ]
