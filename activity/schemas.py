@@ -1,4 +1,23 @@
+from typing import Annotated, Any
+
 from ninja import Schema
+from pydantic import BeforeValidator
+
+
+def unwrap_latlon(v: Any) -> tuple[float, float]:
+    # Detect by class name string
+    if type(v).__name__ == "LatLon":
+        return tuple(v.root)
+
+    # Standard list/tuple fallback
+    if isinstance(v, (list, tuple)):
+        return tuple(v)
+
+    return v
+
+
+# Create a reusable type for coordinates
+LatLonSchema = Annotated[tuple[float, float], BeforeValidator(unwrap_latlon)]
 
 
 class SegmentBoundsSchema(Schema):
@@ -29,6 +48,8 @@ class ExplorerSegment(Schema):
     climb_category_desc: str
     avg_grade: float
     distance: float
+    start_latlng: LatLonSchema
+    end_latlng: LatLonSchema
 
     def to_miles(self) -> float:
         meters_in_mile = 1609.344
@@ -45,6 +66,9 @@ class ExplorerSegment(Schema):
         else:
             return "Hard"
 
+    class Config:
+        from_attributes = True
+
 
 class SearchResponseSchema(Schema):
     id: int
@@ -52,3 +76,5 @@ class SearchResponseSchema(Schema):
     difficulty: str
     distance: float
     avg_grade: float
+    start_latlng: LatLonSchema
+    end_latlng: LatLonSchema

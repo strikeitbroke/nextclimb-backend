@@ -42,6 +42,8 @@ def get_response_schema(explore_segments: list[ExplorerSegment]):
                 difficulty=item.get_difficulty(),
                 distance=item.to_miles(),
                 avg_grade=item.avg_grade,
+                start_latlng=item.start_latlng,
+                end_latlng=item.end_latlng,
             )
         )
     return response_schema
@@ -67,5 +69,24 @@ def search(request, payload: Query[SearchPayloadSchema]):
     ]
     response_schema = get_response_schema(explore_segments)
     data = [s.model_dump(mode="json") for s in response_schema]
-
+    # data = [
+    #     {
+    #         "id": 627158,
+    #         "name": "Montebello",
+    #         "difficulty": "Intermediate",
+    #         "distance": 5.1,
+    #         "avg_grade": 8.1,
+    #         "start_latlng": [37.8331119, -122.4834356],
+    #         "end_latlng": [37.8280722, -122.4981393],
+    #     },
+    #     {
+    #         "id": 8109834,
+    #         "name": "Old La Honda (Bridge to Mailboxes)",
+    #         "difficulty": "Easy",
+    #         "distance": 3.1,
+    #         "avg_grade": 7.8,
+    #         "start_latlng": [37.8331119, -122.4834356],
+    #         "end_latlng": [37.8280722, -122.4981393],
+    #     },
+    # ]
     return data
