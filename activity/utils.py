@@ -54,16 +54,36 @@ def get_bounds(coors: CoorsSchema, radius: float) -> SegmentBoundsSchema:
     )
 
 
-def create_cache_key(sw_lat: float, sw_lon: float, ne_lat: float, ne_lon: float) -> str:
-    precision = 2
-    return f"strava:{round(sw_lat, precision)}:{round(sw_lon, precision)}:{round(ne_lat, precision)}:{round(ne_lon, precision)}"
+def get_normalized_bounds(
+    sw_lat: float, sw_lon: float, ne_lat: float, ne_lon: float, precision: int = 2
+) -> tuple[float, float, float, float]:
+    factor = 10**precision
+
+    # SW: Move Down and Left (Floor)
+    n_sw_lat = math.floor(sw_lat * factor) / factor
+    n_sw_lon = math.floor(sw_lon * factor) / factor
+
+    # NE: Move Up and Right (Ceiling)
+    n_ne_lat = math.ceil(ne_lat * factor) / factor
+    n_ne_lon = math.ceil(ne_lon * factor) / factor
+
+    return n_sw_lat, n_sw_lon, n_ne_lat, n_ne_lon
+
+
+def generate_cache_key(
+    sw_lat: float, sw_lon: float, ne_lat: float, ne_lon: float
+) -> str:
+    n_sw_lat, n_sw_lon, n_ne_lat, n_ne_lon = get_normalized_bounds(
+        sw_lat, sw_lon, ne_lat, ne_lon
+    )
+    return f"strava:{n_sw_lat}:{n_sw_lon}:{n_ne_lat}:{n_ne_lon}"
 
 
 def get_cached_segments(
     sw_lat, sw_lon, ne_lat, ne_lon
 ) -> tuple[list[SearchResponseSchema], str]:
     # 1. Create the rounded key (2 decimal places ~1.1km precision)
-    key = create_cache_key(sw_lat, sw_lon, ne_lat, ne_lon)
+    key = generate_cache_key(sw_lat, sw_lon, ne_lat, ne_lon)
 
     # 2. Return data if it exists, otherwise return None
     return cache.get(key), key
