@@ -8,7 +8,12 @@ from activity.schemas import (
     SearchResponseSchema,
     SegmentBoundsSchema,
 )
-from activity.utils import get_bounds, get_coors
+from activity.utils import (
+    get_bounds,
+    get_cached_segments,
+    get_coors,
+    set_cached_segments,
+)
 
 router = Router()
 
@@ -60,6 +65,12 @@ def search(request, payload: Query[SearchPayloadSchema]):
     coors = get_coors(payload.location)
     bounds = get_bounds(coors, payload.radius)
 
+    cached_data, cache_key = get_cached_segments(
+        bounds.sw_lat, bounds.sw_lon, bounds.ne_lat, bounds.ne_lon
+    )
+    if cached_data:
+        return {"source": "cached", "segments": cached_data}
+
     # data = [{"avg_grade": 10.2, "id": 1, "name": "Hawk hill", "distance": 3.2}]
     strava_explore_segments = client.explore_segments(
         bounds.to_list(), activity_type="riding", min_cat=1, max_cat=4
@@ -69,6 +80,7 @@ def search(request, payload: Query[SearchPayloadSchema]):
     ]
     response_schema = get_response_schema(explore_segments)
     data = [s.model_dump(mode="json") for s in response_schema]
+    set_cached_segments(cache_key, data)
     # data = [
     #     {
     #         "id": 627158,
@@ -89,4 +101,4 @@ def search(request, payload: Query[SearchPayloadSchema]):
     #         "end_latlng": [37.8280722, -122.4981393],
     #     },
     # ]
-    return data
+    return {"source": "strava", "segments": data}

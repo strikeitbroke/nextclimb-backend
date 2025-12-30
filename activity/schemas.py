@@ -22,13 +22,13 @@ LatLonSchema = Annotated[tuple[float, float], BeforeValidator(unwrap_latlon)]
 
 class SegmentBoundsSchema(Schema):
     sw_lat: float
-    sw_lng: float
+    sw_lon: float
     ne_lat: float
-    ne_lng: float
+    ne_lon: float
 
     def to_list(self) -> list[float]:
         """Returns the coordinates as a simple list."""
-        return [self.sw_lat, self.sw_lng, self.ne_lat, self.ne_lng]
+        return [self.sw_lat, self.sw_lon, self.ne_lat, self.ne_lon]
 
 
 class CoorsSchema(Schema):

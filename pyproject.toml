@@ -8,6 +8,7 @@ dependencies = [
     "django>=6.0",
     "django-cors-headers>=4.9.0",
     "django-ninja>=1.5.1",
+    "django-redis>=6.0.0",
     "geopy>=2.4.1",
     "python-dotenv>=1.2.1",
     "stravalib>=2.4",

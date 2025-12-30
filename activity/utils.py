@@ -1,10 +1,11 @@
 import math
 
+from django.core.cache import cache
 from geopy.distance import geodesic
 from geopy.exc import GeocoderServiceError, GeocoderTimedOut
 from geopy.geocoders import Nominatim
 
-from activity.schemas import CoorsSchema, SegmentBoundsSchema
+from activity.schemas import CoorsSchema, SearchResponseSchema, SegmentBoundsSchema
 
 
 def get_coors(city_name: str) -> CoorsSchema | None:
@@ -47,7 +48,27 @@ def get_bounds(coors: CoorsSchema, radius: float) -> SegmentBoundsSchema:
     # 3. Format exactly as Strava wants: "sw_lat,sw_lng,ne_lat,ne_lng"
     return SegmentBoundsSchema(
         sw_lat=sw_point.latitude,
-        sw_lng=sw_point.longitude,
+        sw_lon=sw_point.longitude,
         ne_lat=ne_point.latitude,
-        ne_lng=ne_point.longitude,
+        ne_lon=ne_point.longitude,
     )
+
+
+def create_cache_key(sw_lat: float, sw_lon: float, ne_lat: float, ne_lon: float) -> str:
+    precision = 2
+    return f"strava:{round(sw_lat, precision)}:{round(sw_lon, precision)}:{round(ne_lat, precision)}:{round(ne_lon, precision)}"
+
+
+def get_cached_segments(
+    sw_lat, sw_lon, ne_lat, ne_lon
+) -> tuple[list[SearchResponseSchema], str]:
+    # 1. Create the rounded key (2 decimal places ~1.1km precision)
+    key = create_cache_key(sw_lat, sw_lon, ne_lat, ne_lon)
+
+    # 2. Return data if it exists, otherwise return None
+    return cache.get(key), key
+
+
+def set_cached_segments(key, data):
+    # Cache for 24 hours (86400 seconds)
+    cache.set(key, data, timeout=86400)
