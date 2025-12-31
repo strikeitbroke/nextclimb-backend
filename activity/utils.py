@@ -1,27 +1,42 @@
 import math
+import re
 
 from django.core.cache import cache
 from geopy.distance import geodesic
 from geopy.exc import GeocoderServiceError, GeocoderTimedOut
 from geopy.geocoders import Nominatim
+from typing_extensions import Sequence
 
+from activity.models import GeocodedLocation
 from activity.schemas import CoorsSchema, SearchResponseSchema, SegmentBoundsSchema
 
 
-def get_coors(city_name: str) -> CoorsSchema | None:
+def get_coors(raw_query: str) -> CoorsSchema | None:
     # 1. Initialize the geocoding service
     # 'user_agent' is required; use your app's name
-    geolocator = Nominatim(user_agent="strava_segment_explorer")
+    geolocator = Nominatim(user_agent="nextclimb.fit", timeout=10)
 
     try:
+        normalized_query = normalize_query(raw_query)
+        existing = GeocodedLocation.objects.filter(user_query=normalized_query).first()
+        if existing:
+            print("returning coordinates from local database.")
+            return CoorsSchema(latitude=existing.latitude, longitude=existing.longitude)
         # 2. Perform the lookup
-        location = geolocator.geocode(city_name)
+        location = geolocator.geocode(raw_query)
 
         if location:
             print(f"get_coors: {location.latitude}, {location.longitude}")
+            # 5. Save to DB
+            GeocodedLocation.objects.create(
+                user_query=normalized_query,
+                latitude=location.latitude,
+                longitude=location.longitude,
+            )
             # Returns a tuple: (latitude, longitude)
             return CoorsSchema(latitude=location.latitude, longitude=location.longitude)
 
+        print("location is None")
         return None  # Return None if city not found
 
     except (GeocoderTimedOut, GeocoderServiceError) as e:
@@ -80,7 +95,7 @@ def generate_cache_key(
 
 
 def get_cached_segments(
-    sw_lat, sw_lon, ne_lat, ne_lon
+    sw_lat: float, sw_lon: float, ne_lat: float, ne_lon: float
 ) -> tuple[list[SearchResponseSchema], str]:
     # 1. Create the rounded key (2 decimal places ~1.1km precision)
     key = generate_cache_key(sw_lat, sw_lon, ne_lat, ne_lon)
@@ -89,6 +104,14 @@ def get_cached_segments(
     return cache.get(key), key
 
 
-def set_cached_segments(key, data):
+def set_cached_segments(key: str, data: Sequence[dict[str, object]]) -> None:
     # Cache for 24 hours (86400 seconds)
     cache.set(key, data, timeout=86400)
+
+
+def normalize_query(query: str) -> str:
+    # Lowercase, remove extra spaces, remove commas/dots
+    query = query.lower().strip()
+    query = re.sub(r"[,\.]", "", query)  # "san jose, ca" -> "san jose ca"
+    query = " ".join(query.split())  # "san   jose" -> "san jose"
+    return query

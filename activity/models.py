@@ -28,3 +28,11 @@ class StravaAuth(models.Model):
             self.save()
             return True  # Refreshed
         return False  # Still valid
+
+
+class GeocodedLocation(models.Model):
+    # The clean version from the API (e.g. "San Jose, California, USA")
+    user_query = models.CharField(max_length=255, unique=True)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)

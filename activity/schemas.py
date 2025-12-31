@@ -26,9 +26,9 @@ class SegmentBoundsSchema(Schema):
     ne_lat: float
     ne_lon: float
 
-    def to_list(self) -> list[float]:
+    def to_list(self) -> tuple[float, float, float, float]:
         """Returns the coordinates as a simple list."""
-        return [self.sw_lat, self.sw_lon, self.ne_lat, self.ne_lon]
+        return (self.sw_lat, self.sw_lon, self.ne_lat, self.ne_lon)
 
 
 class CoorsSchema(Schema):

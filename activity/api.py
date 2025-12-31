@@ -1,4 +1,5 @@
 from ninja import Query, Router
+from ninja.errors import HttpError
 from stravalib import Client
 
 from activity.models import StravaAuth
@@ -26,7 +27,12 @@ def get_segment(request, payload: SegmentBoundsSchema):
 
     client.access_token = strava_auth.access_token
 
-    bounds = (payload.sw_lat, payload.sw_lng, payload.ne_lat, payload.ne_lng)
+    bounds = (
+        payload.sw_lat,
+        payload.sw_lon,
+        payload.ne_lat,
+        payload.ne_lon,
+    )
 
     segments = client.explore_segments(
         bounds, activity_type="riding", min_cat=1, max_cat=4
@@ -63,6 +69,9 @@ def search(request, payload: Query[SearchPayloadSchema]):
     client.access_token = strava_auth.access_token
 
     coors = get_coors(payload.location)
+    if not coors:
+        raise HttpError(500, "Coordinates could not be found for the provided location")
+
     bounds = get_bounds(coors, payload.radius)
 
     cached_data, cache_key = get_cached_segments(
@@ -80,7 +89,8 @@ def search(request, payload: Query[SearchPayloadSchema]):
     ]
     response_schema = get_response_schema(explore_segments)
     data = [s.model_dump(mode="json") for s in response_schema]
-    set_cached_segments(cache_key, data)
+    if data:
+        set_cached_segments(cache_key, data)
     # data = [
     #     {
     #         "id": 627158,
