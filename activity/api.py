@@ -58,6 +58,7 @@ def get_response_schema(explore_segments: list[ExplorerSegment]):
                 avg_grade=item.avg_grade,
                 start_latlng=item.start_latlng,
                 end_latlng=item.end_latlng,
+                elev_difference=item.elev_difference,
             )
         )
     return response_schema

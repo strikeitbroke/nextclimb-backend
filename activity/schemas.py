@@ -50,6 +50,7 @@ class ExplorerSegment(Schema):
     distance: float
     start_latlng: LatLonSchema
     end_latlng: LatLonSchema
+    elev_difference: float
 
     def to_miles(self) -> float:
         meters_in_mile = 1609.344
@@ -59,12 +60,39 @@ class ExplorerSegment(Schema):
         return round(self.disance / 1000, 1)
 
     def get_difficulty(self) -> str:
-        if self.climb_category <= 2:
-            return "Easy"
-        elif self.climb_category == 3:
-            return "Intermediate"
+        distance_km = self.distance / 1000
+        gain_m = abs(self.elev_difference)
+        avg_grade = abs(self.avg_grade)
+
+        # 1. Base Score: (Gain is the foundation)
+        score = gain_m * 1.0
+
+        # 2. Steepness Multiplier:
+        # If it's over 8%, every bit of grade hurts significantly more
+        if avg_grade > 8:
+            score += (avg_grade**2) * 2  # Exponential pain for steepness
         else:
+            score += avg_grade * 15
+
+        # 3. Sustained Effort:
+        # Distance adds "fatigue," but we cap it so a flat 50km ride
+        # doesn't get rated as "Brutal"
+        score += min(distance_km * 25, 300)
+
+        # 4. Overrides (The "Beginner Wall")
+        if avg_grade >= 15:
+            score += 300  # "The Wall" override
+        if gain_m > 500:
+            score += 200  # "Big Mountain" override
+
+        # 5. Beginner-Centric Labels
+        if score < 150:
+            return "Easy"
+        if score < 400:
+            return "Moderate"
+        if score < 800:
             return "Hard"
+        return "Brutal"
 
     class Config:
         from_attributes = True
@@ -78,3 +106,4 @@ class SearchResponseSchema(Schema):
     avg_grade: float
     start_latlng: LatLonSchema
     end_latlng: LatLonSchema
+    elev_difference: float
