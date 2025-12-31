@@ -1,3 +1,5 @@
+import logging
+
 from ninja import Query, Router
 from ninja.errors import HttpError
 from stravalib import Client
@@ -17,6 +19,7 @@ from activity.utils import (
 )
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/")

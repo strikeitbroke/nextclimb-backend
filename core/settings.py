@@ -155,3 +155,46 @@ CACHES = {
         },
     }
 }
+
+
+# Ensure the logs directory exists
+LOG_BASE_DIR = Path(__name__).resolve().parent / "logs"
+LOG_BASE_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "production": {
+            "format": "{levelname} {asctime} [{name}] {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "file": {
+            "level": "INFO",  # Allows INFO and above to be written to file
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOG_BASE_DIR / "production_outputs.log",
+            "maxBytes": 1024 * 1024 * 5,
+            "backupCount": 5,
+            "formatter": "production",
+        },
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        # System level: Only ERROR and above
+        "django": {
+            "handlers": ["file", "console"],
+            "level": "ERROR",
+            "propagate": False,  # Set to False to prevent double-logging to the root logger
+        },
+        # Your apps: INFO and above
+        "": {
+            "handlers": ["file", "console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}

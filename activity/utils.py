@@ -1,3 +1,4 @@
+import logging
 import math
 import re
 
@@ -10,6 +11,8 @@ from typing_extensions import Sequence
 from activity.models import GeocodedLocation
 from activity.schemas import CoorsSchema, SearchResponseSchema, SegmentBoundsSchema
 
+logger = logging.getLogger(__name__)
+
 
 def get_coors(raw_query: str) -> CoorsSchema | None:
     # 1. Initialize the geocoding service
@@ -20,13 +23,13 @@ def get_coors(raw_query: str) -> CoorsSchema | None:
         normalized_query = normalize_query(raw_query)
         existing = GeocodedLocation.objects.filter(user_query=normalized_query).first()
         if existing:
-            print("returning coordinates from local database.")
+            logger.info("returning coordinates from local database.")
             return CoorsSchema(latitude=existing.latitude, longitude=existing.longitude)
         # 2. Perform the lookup
         location = geolocator.geocode(raw_query)
 
         if location:
-            print(f"get_coors: {location.latitude}, {location.longitude}")
+            logger.info(f"get_coors: {location.latitude}, {location.longitude}")
             # 5. Save to DB
             GeocodedLocation.objects.create(
                 user_query=normalized_query,
@@ -36,11 +39,11 @@ def get_coors(raw_query: str) -> CoorsSchema | None:
             # Returns a tuple: (latitude, longitude)
             return CoorsSchema(latitude=location.latitude, longitude=location.longitude)
 
-        print("location is None")
+        logger.info("location is None")
         return None  # Return None if city not found
 
     except (GeocoderTimedOut, GeocoderServiceError) as e:
-        print(f"Error: {e}")
+        logger.exception(f"Error: {e}")
         return None
 
 
