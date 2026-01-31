@@ -14,7 +14,7 @@ router = Router()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/auth/google", response=AuthResponse)
+@router.post("/google", response=AuthResponse)
 def verify_google(request, data: GoogleAuthRequest):
     id_info = None
     try:
@@ -47,7 +47,7 @@ def verify_google(request, data: GoogleAuthRequest):
     }
 
 
-@router.get("/auth/me", response=UserResponse, auth=RequiredJWTAuth())
+@router.get("/me", response=UserResponse, auth=RequiredJWTAuth())
 def get_current_user(request):
     user = request.auth
     return {

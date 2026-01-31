@@ -12,7 +12,7 @@ def create_jwt(user_id: int) -> str:
     payload = {
         "user_id": user_id,
         "exp": timezone.now()
-        + timezone.timedelta(miniutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
+        + timezone.timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
     }
 
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
