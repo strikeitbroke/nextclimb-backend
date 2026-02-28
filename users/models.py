@@ -17,11 +17,12 @@ class User(models.Model):
 
 
 class UserStrava(models.Model):
+    user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="strava")
     athlete_id = models.CharField(max_length=255, unique=True)
     access_token = models.CharField(max_length=255)
     refresh_token = models.CharField(max_length=255)
     expires_at = models.BigIntegerField()  # Stores the POSIX timestamp
-    scope: models.CharField(max_length=255)
+    scope = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

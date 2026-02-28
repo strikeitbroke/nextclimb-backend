@@ -3,11 +3,14 @@ import logging
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from ninja import Router
+from ninja.errors import HttpError
 from requests import HTTPError
 
+from stravalib import Client
+
 from core import settings
-from users.models import User
-from users.schemas import AuthResponse, GoogleAuthRequest, UserResponse
+from users.models import User, UserStrava
+from users.schemas import AuthResponse, GoogleAuthRequest, StravaCallbackRequest, StravaStatusResponse, UserResponse
 from users.utils import RequiredJWTAuth, create_jwt
 
 router = Router()
@@ -56,3 +59,38 @@ def get_current_user(request):
         "name": user.name,
         "picture": user.picture,
     }
+
+
+@router.post("/strava/callback", response=StravaStatusResponse, auth=RequiredJWTAuth())
+def strava_callback(request, data: StravaCallbackRequest):
+    client = Client()
+    try:
+        token_response = client.exchange_code_for_token(
+            client_id=int(settings.MY_STRAVA_CLIENT_ID),
+            client_secret=settings.MY_STRAVA_CLIENT_SECRET,
+            code=data.code,
+        )
+    except Exception:
+        logger.info("failed to exchange strava code for token")
+        raise HttpError(400, "invalid strava code")
+
+    athlete = client.get_athlete()
+    user: User = request.auth
+
+    UserStrava.objects.update_or_create(
+        user=user,
+        defaults={
+            "athlete_id": str(athlete.id),
+            "access_token": token_response["access_token"],
+            "refresh_token": token_response["refresh_token"],
+            "expires_at": token_response["expires_at"],
+            "scope": "",
+        },
+    )
+    return {"connected": True}
+
+
+@router.get("/strava/status", response=StravaStatusResponse, auth=RequiredJWTAuth())
+def strava_status(request):
+    user: User = request.auth
+    return {"connected": UserStrava.objects.filter(user=user).exists()}

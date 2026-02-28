@@ -15,3 +15,11 @@ class UserResponse(Schema):
 class AuthResponse(Schema):
     token: str
     user: UserResponse
+
+
+class StravaCallbackRequest(Schema):
+    code: str
+
+
+class StravaStatusResponse(Schema):
+    connected: bool
