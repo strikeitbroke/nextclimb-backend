@@ -57,7 +57,9 @@ class RequiredJWTAuth(HttpBearer):
 
 
 class OptionalJWTAuth(HttpBearer):
-    def authenticate(self, request, token: str) -> User | None:
-        if not token:
-            return None
-        return _get_user_from_token(token)
+    def __call__(self, request):
+        result = super().__call__(request)
+        return result if result is not None else "anonymous"
+
+    def authenticate(self, request, token: str):
+        return _get_user_from_token(token) or "anonymous"

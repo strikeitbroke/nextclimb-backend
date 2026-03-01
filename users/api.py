@@ -9,6 +9,7 @@ from requests import HTTPError
 from stravalib import Client
 
 from core import settings
+from users.fitness import sync_fitness_profile
 from users.models import User, UserStrava
 from users.schemas import AuthResponse, GoogleAuthRequest, StravaCallbackRequest, StravaStatusResponse, UserResponse
 from users.utils import RequiredJWTAuth, create_jwt
@@ -87,6 +88,29 @@ def strava_callback(request, data: StravaCallbackRequest):
             "scope": "",
         },
     )
+
+    sync_fitness_profile(user, client)
+
+    return {"connected": True}
+
+
+@router.post("/strava/resync", response=StravaStatusResponse, auth=RequiredJWTAuth())
+def strava_resync(request):
+    user: User = request.auth
+    try:
+        user_strava = UserStrava.objects.get(user=user)
+    except UserStrava.DoesNotExist:
+        raise HttpError(400, "Strava account not connected")
+
+    client = Client()
+    try:
+        user_strava.check_and_refresh(client)
+    except Exception:
+        logger.info("Strava token refresh failed for user %s", user.id)
+        raise HttpError(401, "Strava token expired, please reconnect")
+
+    client.access_token = user_strava.access_token
+    sync_fitness_profile(user, client)
     return {"connected": True}
 
 

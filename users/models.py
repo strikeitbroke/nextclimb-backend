@@ -40,3 +40,17 @@ class UserStrava(models.Model):
             self.save()
             return True  # Refreshed
         return False  # Still valid
+
+
+class UserFitnessProfile(models.Model):
+    TIER_CHOICES = [
+        ("beginner",     "Beginner"),
+        ("intermediate", "Intermediate"),
+        ("advanced",     "Advanced"),
+        ("elite",        "Elite"),
+    ]
+    user           = models.OneToOneField("User", on_delete=models.CASCADE, related_name="fitness_profile")
+    avg_vam        = models.FloatField()
+    fitness_tier   = models.CharField(max_length=20, choices=TIER_CHOICES)
+    rides_analyzed = models.PositiveIntegerField()
+    last_synced_at = models.DateTimeField()

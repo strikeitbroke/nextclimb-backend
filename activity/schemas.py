@@ -107,3 +107,9 @@ class SearchResponseSchema(Schema):
     start_latlng: LatLonSchema
     end_latlng: LatLonSchema
     elev_difference: float
+
+
+class SegmentSearchResponse(Schema):
+    source:       str
+    segments:     list[SearchResponseSchema]
+    personalized: bool

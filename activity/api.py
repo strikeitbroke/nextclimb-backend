@@ -10,6 +10,7 @@ from activity.schemas import (
     SearchPayloadSchema,
     SearchResponseSchema,
     SegmentBoundsSchema,
+    SegmentSearchResponse,
 )
 from activity.utils import (
     get_bounds,
@@ -17,9 +18,26 @@ from activity.utils import (
     get_coors,
     set_cached_segments,
 )
+from users.models import UserFitnessProfile
+from users.utils import OptionalJWTAuth
 
 router = Router()
 logger = logging.getLogger(__name__)
+
+_DIFFICULTY_SCORE = {
+    "Easy":     {"beginner": 3, "intermediate": 2, "advanced": 1, "elite": 0},
+    "Moderate": {"beginner": 2, "intermediate": 3, "advanced": 2, "elite": 1},
+    "Hard":     {"beginner": 1, "intermediate": 2, "advanced": 3, "elite": 2},
+    "Brutal":   {"beginner": 0, "intermediate": 1, "advanced": 2, "elite": 3},
+}
+
+
+def rank_segments_for_user(segments, fitness_tier):
+    return sorted(
+        segments,
+        key=lambda s: _DIFFICULTY_SCORE.get(s["difficulty"], {}).get(fitness_tier, 1),
+        reverse=True,
+    )
 
 
 @router.post("/")
@@ -64,7 +82,7 @@ def get_response_schema(explore_segments: list[ExplorerSegment]):
     return response_schema
 
 
-@router.get("/search")
+@router.get("/search", response=SegmentSearchResponse, auth=OptionalJWTAuth())
 def search(request, payload: Query[SearchPayloadSchema]):
     client = Client()
     strava_auth = StravaAuth.objects.get(id=1)
@@ -82,37 +100,29 @@ def search(request, payload: Query[SearchPayloadSchema]):
         bounds.sw_lat, bounds.sw_lon, bounds.ne_lat, bounds.ne_lon
     )
     if cached_data:
-        return {"source": "cached", "segments": cached_data}
+        source = "cached"
+        segments = cached_data
+    else:
+        strava_explore_segments = client.explore_segments(
+            bounds.to_list(), activity_type="riding", min_cat=1, max_cat=4
+        )
+        explore_segments: list[ExplorerSegment] = [
+            ExplorerSegment(**s.__dict__) for s in strava_explore_segments
+        ]
+        response_schema = get_response_schema(explore_segments)
+        segments = [s.model_dump(mode="json") for s in response_schema]
+        if segments:
+            set_cached_segments(cache_key, segments)
+        source = "strava"
 
-    # data = [{"avg_grade": 10.2, "id": 1, "name": "Hawk hill", "distance": 3.2}]
-    strava_explore_segments = client.explore_segments(
-        bounds.to_list(), activity_type="riding", min_cat=1, max_cat=4
-    )
-    explore_segments: list[ExplorerSegment] = [
-        ExplorerSegment(**s.__dict__) for s in strava_explore_segments
-    ]
-    response_schema = get_response_schema(explore_segments)
-    data = [s.model_dump(mode="json") for s in response_schema]
-    if data:
-        set_cached_segments(cache_key, data)
-    # data = [
-    #     {
-    #         "id": 627158,
-    #         "name": "Montebello",
-    #         "difficulty": "Intermediate",
-    #         "distance": 5.1,
-    #         "avg_grade": 8.1,
-    #         "start_latlng": [37.8331119, -122.4834356],
-    #         "end_latlng": [37.8280722, -122.4981393],
-    #     },
-    #     {
-    #         "id": 8109834,
-    #         "name": "Old La Honda (Bridge to Mailboxes)",
-    #         "difficulty": "Easy",
-    #         "distance": 3.1,
-    #         "avg_grade": 7.8,
-    #         "start_latlng": [37.8331119, -122.4834356],
-    #         "end_latlng": [37.8280722, -122.4981393],
-    #     },
-    # ]
-    return {"source": "strava", "segments": data}
+    personalized = False
+    user = request.auth if request.auth != "anonymous" else None
+    if user is not None:
+        try:
+            profile = UserFitnessProfile.objects.get(user=user)
+            segments = rank_segments_for_user(segments, profile.fitness_tier)
+            personalized = True
+        except UserFitnessProfile.DoesNotExist:
+            pass
+
+    return {"source": source, "segments": segments, "personalized": personalized}
