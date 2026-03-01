@@ -112,7 +112,8 @@ class SearchResponseSchema(Schema):
 class FeedbackRequest(Schema):
     location: str
     radius: int
-    vote: bool   # True = up, False = down
+    vote:    bool | None = None
+    comment: str | None = None
 
 
 class FeedbackResponse(Schema):

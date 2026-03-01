@@ -40,7 +40,8 @@ class GeocodedLocation(models.Model):
 
 
 class SearchFeedback(models.Model):
-    location   = models.CharField(max_length=255)  # normalized location
+    location   = models.CharField(max_length=255)           # normalized location
     radius     = models.IntegerField()
-    vote       = models.BooleanField()              # True = thumbs up, False = thumbs down
+    vote       = models.BooleanField(null=True, blank=True)  # True = up, False = down, None = not voted
+    comment    = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
