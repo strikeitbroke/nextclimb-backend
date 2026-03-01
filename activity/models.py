@@ -37,3 +37,10 @@ class GeocodedLocation(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class SearchFeedback(models.Model):
+    location   = models.CharField(max_length=255)  # normalized location
+    radius     = models.IntegerField()
+    vote       = models.BooleanField()              # True = thumbs up, False = thumbs down
+    created_at = models.DateTimeField(auto_now_add=True)

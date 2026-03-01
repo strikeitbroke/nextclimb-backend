@@ -107,3 +107,13 @@ class SearchResponseSchema(Schema):
     start_latlng: LatLonSchema
     end_latlng: LatLonSchema
     elev_difference: float
+
+
+class FeedbackRequest(Schema):
+    location: str
+    radius: int
+    vote: bool   # True = up, False = down
+
+
+class FeedbackResponse(Schema):
+    ok: bool

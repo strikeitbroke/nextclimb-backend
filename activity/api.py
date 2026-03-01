@@ -4,9 +4,11 @@ from ninja import Query, Router
 from ninja.errors import HttpError
 from stravalib import Client
 
-from activity.models import StravaAuth
+from activity.models import SearchFeedback, StravaAuth
 from activity.schemas import (
     ExplorerSegment,
+    FeedbackRequest,
+    FeedbackResponse,
     SearchPayloadSchema,
     SearchResponseSchema,
     SegmentBoundsSchema,
@@ -15,6 +17,7 @@ from activity.utils import (
     get_bounds,
     get_cached_segments,
     get_coors,
+    normalize_query,
     set_cached_segments,
 )
 
@@ -116,3 +119,13 @@ def search(request, payload: Query[SearchPayloadSchema]):
     #     },
     # ]
     return {"source": "strava", "segments": data}
+
+
+@router.post("/feedback", response=FeedbackResponse)
+def submit_feedback(request, payload: FeedbackRequest):
+    SearchFeedback.objects.create(
+        location=normalize_query(payload.location),
+        radius=payload.radius,
+        vote=payload.vote,
+    )
+    return {"ok": True}
