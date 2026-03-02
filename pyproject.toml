@@ -10,6 +10,7 @@ dependencies = [
     "django-ninja>=1.5.1",
     "django-redis>=6.0.0",
     "django-types>=0.22.0",
+    "email-validator>=2.3.0",
     "geopy>=2.4.1",
     "python-dotenv>=1.2.1",
     "stravalib>=2.4",

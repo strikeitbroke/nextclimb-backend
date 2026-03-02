@@ -1,7 +1,7 @@
 from typing import Annotated, Any
 
 from ninja import Schema
-from pydantic import BeforeValidator
+from pydantic import BeforeValidator, EmailStr
 
 
 def unwrap_latlon(v: Any) -> tuple[float, float]:
@@ -117,4 +117,12 @@ class FeedbackRequest(Schema):
 
 
 class FeedbackResponse(Schema):
+    ok: bool
+
+
+class EmailSignupRequest(Schema):
+    email: EmailStr
+
+
+class EmailSignupResponse(Schema):
     ok: bool

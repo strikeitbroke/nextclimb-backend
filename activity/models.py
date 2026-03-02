@@ -39,6 +39,11 @@ class GeocodedLocation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+class EmailSignup(models.Model):
+    email      = models.EmailField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class SearchFeedback(models.Model):
     location   = models.CharField(max_length=255)           # normalized location
     radius     = models.IntegerField()

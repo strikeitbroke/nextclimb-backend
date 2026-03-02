@@ -4,8 +4,10 @@ from ninja import Query, Router
 from ninja.errors import HttpError
 from stravalib import Client
 
-from activity.models import SearchFeedback, StravaAuth
+from activity.models import EmailSignup, SearchFeedback, StravaAuth
 from activity.schemas import (
+    EmailSignupRequest,
+    EmailSignupResponse,
     ExplorerSegment,
     FeedbackRequest,
     FeedbackResponse,
@@ -119,6 +121,12 @@ def search(request, payload: Query[SearchPayloadSchema]):
     #     },
     # ]
     return {"source": "strava", "segments": data}
+
+
+@router.post("/newsletter/signup", response=EmailSignupResponse)
+def newsletter_signup(request, payload: EmailSignupRequest):
+    EmailSignup.objects.get_or_create(email=payload.email)
+    return {"ok": True}
 
 
 @router.post("/feedback", response=FeedbackResponse)
