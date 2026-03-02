@@ -15,4 +15,5 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "stravalib>=2.4",
     "uvicorn>=0.40.0",
+    "whitenoise>=6.12.0",
 ]
