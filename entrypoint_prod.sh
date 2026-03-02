@@ -6,6 +6,9 @@ set -e
 echo "Running migrations..."
 python manage.py migrate --noinput
 
+echo "Collecting static files..."
+python manage.py collectstatic --noinput
+
 # USE 'exec' here.
 # This is the final step. Uvicorn replaces the shell.
 echo "Starting server..."

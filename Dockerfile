@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # Copy the rest of the code and install the project
 COPY . /app
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh /app/entrypoint_prod.sh
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
