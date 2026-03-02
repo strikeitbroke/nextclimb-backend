@@ -36,6 +36,7 @@ staticfiles/
 
 # --- Environment Secrets (Crucial for python-dotenv) ---
 .env
+.env.local
 .venv
 env/
 venv/

@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
+load_dotenv(os.path.join(BASE_DIR, ".env.local"), override=True)
 
 
 # Quick-start development settings - unsuitable for production
@@ -28,7 +29,7 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = "django-insecure-4hynm5qtur-@zz&)!ipjm44dbr_o@_+z6)rz+$2j!&#ib2x^x("
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
     "localhost",
