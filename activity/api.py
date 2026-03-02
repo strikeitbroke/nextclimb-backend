@@ -127,5 +127,6 @@ def submit_feedback(request, payload: FeedbackRequest):
         location=normalize_query(payload.location),
         radius=payload.radius,
         vote=payload.vote,
+        comment=payload.comment,
     )
     return {"ok": True}
