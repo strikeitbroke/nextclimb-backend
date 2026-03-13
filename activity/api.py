@@ -1,4 +1,5 @@
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from ninja import Query, Router
 from ninja.errors import HttpError
@@ -84,48 +85,55 @@ def search(request, payload: Query[SearchPayloadSchema]):
 
     bounds = get_bounds(coors, payload.radius)
 
-    cached_data, cache_key = get_cached_segments(
-        bounds.sw_lat, bounds.sw_lon, bounds.ne_lat, bounds.ne_lon
-    )
-    if cached_data:
-        return {"source": "cached", "segments": cached_data}
+    quadrants = split_bounds(bounds)
 
-    # data = [{"avg_grade": 10.2, "id": 1, "name": "Hawk hill", "distance": 3.2}]
-    seen_ids: set[int] = set()
-    explore_segments: list[ExplorerSegment] = []
-    for quadrant in split_bounds(bounds):
+    # Check all caches first
+    cache_results = [
+        get_cached_segments(q.sw_lat, q.sw_lon, q.ne_lat, q.ne_lon)
+        for q in quadrants
+    ]
+
+    def fetch_from_strava(index: int) -> tuple[int, str, list[dict]]:
+        quadrant = quadrants[index]
+        _, cache_key = cache_results[index]
         strava_explore_segments = client.explore_segments(
             quadrant.to_list(), activity_type="riding", min_cat=1, max_cat=4
         )
-        for s in strava_explore_segments:
-            if s.id not in seen_ids:
-                seen_ids.add(s.id)
-                explore_segments.append(ExplorerSegment(**s.__dict__))
-    response_schema = get_response_schema(explore_segments)
-    data = [s.model_dump(mode="json") for s in response_schema]
-    if data:
-        set_cached_segments(cache_key, data)
-    # data = [
-    #     {
-    #         "id": 627158,
-    #         "name": "Montebello",
-    #         "difficulty": "Intermediate",
-    #         "distance": 5.1,
-    #         "avg_grade": 8.1,
-    #         "start_latlng": [37.8331119, -122.4834356],
-    #         "end_latlng": [37.8280722, -122.4981393],
-    #     },
-    #     {
-    #         "id": 8109834,
-    #         "name": "Old La Honda (Bridge to Mailboxes)",
-    #         "difficulty": "Easy",
-    #         "distance": 3.1,
-    #         "avg_grade": 7.8,
-    #         "start_latlng": [37.8331119, -122.4834356],
-    #         "end_latlng": [37.8280722, -122.4981393],
-    #     },
-    # ]
-    return {"source": "strava", "segments": data}
+        quadrant_explorer = [ExplorerSegment(**s.__dict__) for s in strava_explore_segments]
+        quadrant_data = [s.model_dump(mode="json") for s in get_response_schema(quadrant_explorer)]
+        if quadrant_data:
+            set_cached_segments(cache_key, quadrant_data)
+        return index, cache_key, quadrant_data
+
+    miss_indices = [i for i, (data, _) in enumerate(cache_results) if not data]
+    strava_results: dict[int, list[dict]] = {}
+
+    if miss_indices:
+        with ThreadPoolExecutor(max_workers=len(miss_indices)) as executor:
+            futures = {executor.submit(fetch_from_strava, i): i for i in miss_indices}
+            for future in as_completed(futures):
+                index, _, quadrant_data = future.result()
+                strava_results[index] = quadrant_data
+
+    cached_count = len(quadrants) - len(miss_indices)
+    seen_ids: set[int] = set()
+    all_segments: list[dict] = []
+
+    for i, (cached_data, _) in enumerate(cache_results):
+        segments = cached_data if cached_data else strava_results.get(i, [])
+        for segment in segments:
+            if segment["id"] not in seen_ids:
+                seen_ids.add(segment["id"])
+                all_segments.append(segment)
+
+    if cached_count == 4:
+        source = "cached"
+    elif cached_count == 0:
+        source = "strava"
+    else:
+        source = "partial_cache"
+
+    return {"source": source, "segments": all_segments}
 
 
 @router.post("/newsletter/signup", response=EmailSignupResponse)
