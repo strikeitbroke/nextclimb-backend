@@ -21,6 +21,7 @@ from activity.utils import (
     get_coors,
     normalize_query,
     set_cached_segments,
+    split_bounds,
 )
 
 router = Router()
@@ -90,12 +91,16 @@ def search(request, payload: Query[SearchPayloadSchema]):
         return {"source": "cached", "segments": cached_data}
 
     # data = [{"avg_grade": 10.2, "id": 1, "name": "Hawk hill", "distance": 3.2}]
-    strava_explore_segments = client.explore_segments(
-        bounds.to_list(), activity_type="riding", min_cat=1, max_cat=4
-    )
-    explore_segments: list[ExplorerSegment] = [
-        ExplorerSegment(**s.__dict__) for s in strava_explore_segments
-    ]
+    seen_ids: set[int] = set()
+    explore_segments: list[ExplorerSegment] = []
+    for quadrant in split_bounds(bounds):
+        strava_explore_segments = client.explore_segments(
+            quadrant.to_list(), activity_type="riding", min_cat=1, max_cat=4
+        )
+        for s in strava_explore_segments:
+            if s.id not in seen_ids:
+                seen_ids.add(s.id)
+                explore_segments.append(ExplorerSegment(**s.__dict__))
     response_schema = get_response_schema(explore_segments)
     data = [s.model_dump(mode="json") for s in response_schema]
     if data:

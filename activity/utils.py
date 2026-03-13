@@ -72,6 +72,17 @@ def get_bounds(coors: CoorsSchema, radius: float) -> SegmentBoundsSchema:
     )
 
 
+def split_bounds(bounds: SegmentBoundsSchema) -> list[SegmentBoundsSchema]:
+    mid_lat = (bounds.sw_lat + bounds.ne_lat) / 2
+    mid_lon = (bounds.sw_lon + bounds.ne_lon) / 2
+    return [
+        SegmentBoundsSchema(sw_lat=bounds.sw_lat, sw_lon=bounds.sw_lon, ne_lat=mid_lat, ne_lon=mid_lon),  # SW
+        SegmentBoundsSchema(sw_lat=bounds.sw_lat, sw_lon=mid_lon, ne_lat=mid_lat, ne_lon=bounds.ne_lon),  # SE
+        SegmentBoundsSchema(sw_lat=mid_lat, sw_lon=bounds.sw_lon, ne_lat=bounds.ne_lat, ne_lon=mid_lon),  # NW
+        SegmentBoundsSchema(sw_lat=mid_lat, sw_lon=mid_lon, ne_lat=bounds.ne_lat, ne_lon=bounds.ne_lon),  # NE
+    ]
+
+
 def get_normalized_bounds(
     sw_lat: float, sw_lon: float, ne_lat: float, ne_lon: float, precision: int = 2
 ) -> tuple[float, float, float, float]:
