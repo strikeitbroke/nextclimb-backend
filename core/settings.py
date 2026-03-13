@@ -204,5 +204,14 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        # Suppress verbose HTTP request logging from stravalib/urllib3
+        "stravalib": {
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "urllib3": {
+            "level": "WARNING",
+            "propagate": False,
+        },
     },
 }
